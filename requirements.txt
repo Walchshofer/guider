@@ -24,7 +24,7 @@ https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/whee
 # for memory:
 chromadb
 
-# for exllama:
-# safetensors==0.3.1
-# sentencepiece>=0.1.97
-# ninja==1.11.1
+#for exllama:
+safetensors==0.3.1
+sentencepiece>=0.1.97
+ninja==1.11.1

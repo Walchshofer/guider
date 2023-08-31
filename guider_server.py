@@ -1,3 +1,5 @@
+
+
 import sys
 import json
 from pathlib import Path
@@ -6,6 +8,15 @@ from typing import Dict, List
 from urllib.parse import urlparse, parse_qs
 from sentence_transformers import SentenceTransformer
 from memory import Memory
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
+# Get the MODEL_PATH
+MODEL_PATH = os.getenv("MODEL_PATH")
+
 
 from llama_attn_hijack import hijack_llama_attention_xformers
 
@@ -30,7 +41,9 @@ def setup_models(model_name: str):
     """
     model_name: a Huggingface path like TheBlock/tulu-13B-GPTQ
     """
-
+    # Combine MODEL_PATH and model_name
+    full_model_path = os.path.join(MODEL_PATH, model_name)
+    
     # A slight improvement in memory usage by using xformers attention:
     if "--xformers" in sys.argv:
         hijack_llama_attention_xformers()
@@ -50,7 +63,7 @@ def setup_models(model_name: str):
     elif MODEL_EXECUTOR == "exllama":
         from llama_exllama import ExLLaMA
 
-        model = ExLLaMA(model_name)
+        model = ExLLaMA(full_model_path)
     elif MODEL_EXECUTOR == "ctransformers":
         from llama_ctransformers import LLaMATransformer
 

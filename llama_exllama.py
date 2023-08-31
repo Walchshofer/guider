@@ -1,36 +1,57 @@
-from pathlib import Path
+import os
+from dotenv import load_dotenv
+from huggingface_hub import snapshot_download, HfApi
 from guidance.llms import Transformers
-from huggingface_hub import snapshot_download
-
 from transformers import LlamaTokenizer
-
 from exllama_hf import ExllamaHF
+from pathlib import Path
 
+
+# Load environment variables from .env file
+load_dotenv()
 
 class ExLLaMA(Transformers):
     """A HuggingFace transformers version of the LLaMA language
     model with Guidance support."""
 
     def _model_and_tokenizer(self, model, tokenizer, **kwargs):
-        # load the LLaMA specific tokenizer and model
+        # Load the LLaMA specific tokenizer and model
 
         assert tokenizer is None, "We will not respect any tokenizer from the caller."
         assert isinstance(model, str), "Model should be a str with LLaMAGPTQ"
 
         print(f"Initializing ExLlamaGPTQ with model {model}")
 
-        models_dir = "./models"
-        name_suffix = model.split("/")[1]
-        model_dir = f"{models_dir}/{name_suffix}"
-        snapshot_download(repo_id=model, local_dir=model_dir)
+        # Read MODEL_PATH and HUGGINGFACE_TOKEN from the .env file
+        models_dir = os.getenv('MODEL_PATH')
+        huggingface_token = os.getenv('HUGGINGFACE_TOKEN')
 
-        (model, tokenizer) = _load(model_dir)
+        # Create the full model directory path by joining models_dir and model
+        model_dir = os.path.join(models_dir, model)
+
+        try:
+            # Try to load the model and tokenizer from the local directory
+            (model, tokenizer) = _load(model_dir)
+            print(f"Successfully loaded model from local path: {model_dir}")
+        except Exception as e:
+            print(f"Failed to load model from local path: {model_dir}. Error: {e}")
+            print("Falling back to downloading from Hugging Face Hub.")
+
+            # No need to "login", just pass the token to snapshot_download
+            snapshot_download(repo_id=model, local_dir=model_dir, token=huggingface_token)
+            (model, tokenizer) = _load(model_dir)
 
         print(f"Loading tokenizer from: {model_dir}")
 
         tokenizer = LlamaTokenizer.from_pretrained(Path(model_dir))
 
         return super()._model_and_tokenizer(model, tokenizer, **kwargs)
+
+def _load(model_dir: str):
+    model_dir = Path(model_dir)
+    exllama_hf = ExllamaHF.from_pretrained(model_dir)
+    return (exllama_hf, None)
+
 
     @staticmethod
     def role_start(role):
